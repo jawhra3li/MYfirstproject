@@ -1,0 +1,126 @@
+"""
+b=10
+n=3
+r=2
+opreation= b*(1+(r/100))**n
+print(opreation)
+print(14%5)
+print(8%3)
+print(238%2)
+
+a=1500
+b=10500
+print( 'I have ', a//1000, 'OMR and ' , a%1000 ,'Baiases')
+print( 'I have ', b//1000, 'OMR and ' , b%1000 ,'Baiases')
+
+
+from math import *
+x=2
+y=sqrt(x)
+print('root square of 2=',y)
+
+r=round (sqrt(x),3)
+print(r)
+
+total=5
+total+=5
+print(total)
+
+
+name='Ali salim'
+print(len(name))
+
+firstname='JOUHARA'
+lastname='Ali'
+name=firstname + " " +lastname
+print(name)
+
+firstname2='JOUHARA'
+lastname2='Ali'
+name2=firstname2 +lastname2
+print(name2)
+
+firstn='JOUHARA'
+age=23
+name3=firstn + " " +str(age)
+print(name3)
+
+
+
+name="jouhara"*200
+print(name)
+
+name='ali ahmed'
+print(name[len(name)-1])
+
+name=input("please enter your name: ")
+age=int(input("please enter your age: "))
+print("your name is",name ,"and your age is",age)
+
+price=1.243735787
+print("price per liters %0.2f " %(price))
+print("price per liters %10.2f " %(price))
+
+
+quantity=1.32223
+total=1.6388773
+print("the quantity is %0.2f the total is %3.0d" %(quantity,total))
+
+print("the quantity is %7d " %(quantity))
+
+
+cans=6
+userinput=input("please enter the price for 6-pak: " )
+packprice=float(userinput)
+userinput=input("please enter the volume for each: " )
+canvolume=float(userinput)
+packvolume=canvolume*cans
+priceperonce=packprice/packvolume
+print("price per ounce %8.2f " %(priceperonce))
+
+"""
+"""
+number=int(input("please enter the number: "))
+if number%2==0:
+ print(number,"is even number")
+else:
+ print(number,"is odd number")
+ """
+"""
+
+grade=int(input("input the student grade"))
+if grade>85:
+ print("you will have discount")
+else:
+ print("you will not  have discount")
+ 
+ 
+floor=int(input("please enter floor number: "))
+if floor>13:
+   actualfloor=floor-1
+   print("you are in ", actualfloor)
+if floor==13:
+ actualfloor=floor 
+ print("dose not found floor 13  ", actualfloor)
+else:   
+ actualfloor=floor
+ print("you are in ", actualfloor)
+ 
+
+orignalprice=int(input("enter the price to calculte price after discount"))
+if orignalprice<=128:
+ discountprice=orignalprice*0.92
+ print("price after discount is= ",orignalprice-discountprice)
+else:
+ discountprice=orignalprice*0.84
+ print("price after discount is= ",orignalprice-discountprice)
+ 
+ """
+w=100
+T=5
+n=w//T
+if n%2==0:
+ n-=1
+ gap=(w-(n*T))/2
+print ("number of tiles: ",n)
+print ("Gap at each end: ",gap) 
