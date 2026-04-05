@@ -41,7 +41,7 @@ name2=firstname2 +lastname2
 print(name2)
 
 firstn='JOUHARA'
-age=23
+age=26
 name3=firstn + " " +str(age)
 print(name3)
 
