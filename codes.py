@@ -22,7 +22,7 @@ print('root square of 2=',y)
 r=round (sqrt(x),3)
 print(r)
 
-total=5
+total=9
 total+=5
 print(total)
 
