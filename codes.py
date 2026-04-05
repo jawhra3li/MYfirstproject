@@ -123,4 +123,4 @@ if n%2==0:
  n-=1
  gap=(w-(n*T))/2
 print ("number of tiles: ",n)
-print ("Gap at each end: ",gap) 
+print ("Gap at each end: ",gap) """12"""
