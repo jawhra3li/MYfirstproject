@@ -115,7 +115,7 @@ else:
  discountprice=orignalprice*0.84
  print("price after discount is= ",orignalprice-discountprice)
  
- """
+ 
 w=100
 T=5
 n=w//T
@@ -124,3 +124,4 @@ if n%2==0:
  gap=(w-(n*T))/2
 print ("number of tiles: ",n)
 print ("Gap at each end: ",gap) 
+"""
