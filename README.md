@@ -1,2 +1,2 @@
 # MYfirstproject
-My codes during python lessons
+My codes during NAFAD boodcamp 
