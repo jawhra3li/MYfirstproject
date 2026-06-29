@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROC Curves & AUC for Model Evaluation</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap');
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --ink:        #0D1B2A;
+  --navy:       #0E2954;
+  --blue:       #1255A3;
+  --sky:        #2176C8;
+  --steel:      #4A90C4;
+  --mist:       #D6E8F7;
+  --teal:       #0D7A6A;
+  --mint:       #1BB89A;
+  --seafoam:    #D0F0EA;
+  --slate:      #4F6070;
+  --silver:     #8FA3B3;
+  --cloud:      #EBF2F8;
+  --white:      #FFFFFF;
+  --warn:       #D97706;
+  --warn-bg:    #FEF3C7;
+  --danger:     #C0392B;
+  --danger-bg:  #FDECEA;
+  --gold:       #F59E0B;
+}
+
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: #C9D8E8;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 28px 16px;
+}
+
+/* ═══════════════ POSTER SHELL ═══════════════ */
+.poster {
+  width: 1120px;
+  background: var(--white);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 20px 80px rgba(13,27,42,0.22);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ═══════════════ HEADER ═══════════════ */
+.hdr {
+  background: var(--navy);
+  position: relative;
+  overflow: hidden;
+  padding: 34px 52px 30px;
+}
+.hdr-arc {
+  position: absolute;
+  right: -100px; top: -120px;
+  width: 520px; height: 520px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, rgba(27,184,154,0.18) 0%, transparent 65%);
+  pointer-events: none;
+}
+.hdr-arc2 {
+  position: absolute;
+  left: 30%; bottom: -80px;
+  width: 260px; height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(33,118,200,0.14) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hdr-eyebrow {
+  font-size: 10px; font-weight: 600; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--mint);
+  margin-bottom: 10px;
+}
+.hdr h1 {
+  font-size: 34px; font-weight: 700; color: var(--white);
+  line-height: 1.15; max-width: 700px;
+}
+.hdr h1 em { font-style: normal; color: var(--mint); }
+.hdr-desc {
+  margin-top: 12px; font-size: 13px; color: rgba(255,255,255,0.65);
+  max-width: 680px; line-height: 1.6;
+}
+.hdr-pills {
+  margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap;
+}
+.pill {
+  border: 1px solid rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.75);
+  border-radius: 20px; padding: 3px 12px;
+  font-size: 11px; font-weight: 500;
+}
+
+/* ═══════════════ BAND / DIVIDER ═══════════════ */
+.band {
+  background: var(--cloud);
+  border-top: 1px solid #CDDCEA;
+  border-bottom: 1px solid #CDDCEA;
+  padding: 7px 52px;
+  display: flex; align-items: center; gap: 10px;
+}
+.band-num {
+  width: 22px; height: 22px; border-radius: 50%;
+  font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.band-title {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* ═══════════════ BODY GRID ═══════════════ */
+.row { display: flex; }
+.col {
+  flex: 1;
+  padding: 22px 28px;
+  border-right: 1px solid #DDE8F0;
+  border-bottom: 1px solid #DDE8F0;
+}
+.col:last-child { border-right: none; }
+.col.w2 { flex: 2; }
+.col.w15 { flex: 1.5; }
+.col.no-bottom { border-bottom: none; }
+
+.sec-label {
+  font-size: 9px; font-weight: 700; letter-spacing: 2.5px;
+  text-transform: uppercase;
+  display: flex; align-items: center; gap: 7px;
+  margin-bottom: 11px;
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.col h2 {
+  font-size: 14.5px; font-weight: 700; color: var(--ink);
+  margin-bottom: 8px; line-height: 1.3;
+}
+.col p { font-size: 12px; color: var(--slate); line-height: 1.65; }
+
+/* ═══════════════ CONFUSION MATRIX ═══════════════ */
+.cm { margin-top: 14px; }
+.cm-header-row {
+  display: flex; margin-left: 72px; gap: 3px; margin-bottom: 3px;
+}
+.cm-header-cell {
+  width: 76px; text-align: center;
+  font-size: 9.5px; font-weight: 700; color: var(--blue);
+}
+.cm-body-row { display: flex; align-items: center; gap: 3px; margin-bottom: 3px; }
+.cm-row-hdr {
+  width: 68px; text-align: right; padding-right: 8px;
+  font-size: 9.5px; font-weight: 700; color: var(--teal);
+}
+.cm-cell {
+  width: 76px; height: 56px; border-radius: 9px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 2px;
+}
+.cm-cell b { font-size: 14px; font-weight: 700; font-family: 'DM Mono', monospace; }
+.cm-cell span { font-size: 8.5px; font-weight: 500; }
+.tp { background: #DCFCE7; color: #166534; }
+.fn { background: #FEE2E2; color: #991B1B; }
+.fp { background: #FEE2E2; color: #991B1B; }
+.tn { background: #DCFCE7; color: #166534; }
+.cm-axis-note {
+  font-size: 9px; color: var(--silver); margin-top: 6px; font-style: italic;
+}
+
+/* ═══════════════ METRIC CARDS ═══════════════ */
+.metric-row { display: flex; gap: 8px; margin-top: 13px; }
+.metric-card {
+  flex: 1; border-radius: 10px; padding: 10px 10px 8px;
+  text-align: center;
+}
+.metric-card .mf {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; font-weight: 500;
+  line-height: 1.5; margin-bottom: 5px;
+}
+.metric-card .mn {
+  font-size: 9px; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+.mc-a { background: #EFF6FF; color: var(--blue); }
+.mc-p { background: #ECFDF5; color: var(--teal); }
+.mc-r { background: #F0FDF4; color: #15803D; }
+
+/* ═══════════════ WARN BOX ═══════════════ */
+.warn-box {
+  margin-top: 13px;
+  background: var(--warn-bg);
+  border-left: 4px solid var(--warn);
+  border-radius: 0 9px 9px 0;
+  padding: 10px 13px;
+}
+.warn-box .wt {
+  font-size: 9.5px; font-weight: 700; color: var(--warn);
+  letter-spacing: 1px; text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.warn-box p { font-size: 11.5px; color: #78350F; line-height: 1.55; }
+
+/* ═══════════════ BULLETS ═══════════════ */
+.bullets { margin-top: 10px; display: flex; flex-direction: column; gap: 7px; }
+.bullet { display: flex; align-items: flex-start; gap: 9px; }
+.bi {
+  width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9.5px; font-weight: 700; margin-top: 1px;
+}
+.bullet p { font-size: 12px; color: var(--slate); line-height: 1.55; }
+.bullet p b { color: var(--ink); }
+
+/* ═══════════════ FORMULA ROW ═══════════════ */
+.fml-row { display: flex; gap: 8px; margin-top: 12px; }
+.fml-box {
+  flex: 1; border-radius: 10px; padding: 10px 12px; text-align: center;
+}
+.fml-box .fname {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.fml-box .fformula {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px; font-weight: 500; line-height: 1.6;
+}
+.fml-box .faka {
+  font-size: 9px; margin-top: 5px; font-weight: 500; opacity: 0.75;
+}
+.fml-tpr { background: #E0F2FE; color: #075985; }
+.fml-fpr { background: #EDE9FE; color: #5B21B6; }
+
+/* ═══════════════ ROC SVG CHART ═══════════════ */
+.roc-svg-wrap { margin-top: 10px; }
+.roc-svg { width: 100%; height: auto; display: block; }
+
+/* ═══════════════ AUC SCALE ═══════════════ */
+.auc-scale {
+  margin-top: 13px;
+  background: var(--cloud);
+  border-radius: 11px;
+  padding: 12px 14px;
+}
+.auc-scale-title {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--blue); margin-bottom: 9px;
+}
+.auc-bar-track {
+  height: 14px; border-radius: 7px;
+  background: linear-gradient(90deg, #FCA5A5 0%, #FBBF24 30%, #6EE7B7 60%, #059669 100%);
+  position: relative; margin-bottom: 4px;
+}
+.auc-bar-marker {
+  position: absolute; top: -2px;
+  width: 3px; height: 18px; border-radius: 2px;
+  background: var(--ink);
+}
+.auc-bar-labels {
+  display: flex; justify-content: space-between;
+  font-size: 9px; color: var(--slate); font-family: 'DM Mono', monospace;
+}
+.auc-model-pills {
+  display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;
+}
+.amp {
+  border-radius: 6px; padding: 3px 9px;
+  font-size: 10px; font-weight: 600; font-family: 'DM Mono', monospace;
+}
+
+/* ═══════════════ AUC CARDS ═══════════════ */
+.auc-cards { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.auc-card {
+  border-radius: 10px; padding: 10px 13px;
+  display: flex; align-items: center; gap: 12px;
+}
+.auc-card .auc-val {
+  font-size: 22px; font-weight: 700; font-family: 'DM Mono', monospace;
+  flex-shrink: 0; width: 52px; text-align: center; line-height: 1;
+}
+.auc-card .auc-text { font-size: 11.5px; line-height: 1.5; }
+.auc-card .auc-text b { font-size: 12px; display: block; margin-bottom: 2px; }
+.ac-perfect { background: #DCFCE7; color: #166534; }
+.ac-good    { background: #DBEAFE; color: #1D4ED8; }
+.ac-random  { background: #F3F4F6; color: #4B5563; }
+.ac-bad     { background: #FEE2E2; color: #991B1B; }
+
+/* ═══════════════ HIGHLIGHT BOX ═══════════════ */
+.hl-box {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 100%);
+  border-radius: 11px; padding: 13px 16px; margin-top: 12px;
+  color: white;
+}
+.hl-box .hl-tag {
+  font-size: 9px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--mint); margin-bottom: 5px;
+}
+.hl-box p { font-size: 12px; line-height: 1.6; color: rgba(255,255,255,0.85); }
+
+/* ═══════════════ KEY CARDS ═══════════════ */
+.key-cards { display: flex; flex-direction: column; gap: 8px; margin-top: 11px; }
+.key-card {
+  border-radius: 10px; padding: 10px 13px;
+  border-left: 4px solid;
+}
+.key-card .kc-title {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; margin-bottom: 4px;
+}
+.key-card p { font-size: 11.5px; color: var(--slate); line-height: 1.55; }
+.key-card p b { color: var(--ink); }
+.kc-blue  { background: #EFF6FF; border-color: var(--blue); }
+.kc-blue .kc-title { color: var(--blue); }
+.kc-teal  { background: #F0FDF9; border-color: var(--teal); }
+.kc-teal .kc-title { color: var(--teal); }
+.kc-mint  { background: #ECFDF5; border-color: var(--mint); }
+.kc-mint .kc-title { color: #0F9D7A; }
+
+/* ═══════════════ SELECTION STEPS ═══════════════ */
+.steps { margin-top: 11px; display: flex; flex-direction: column; gap: 9px; }
+.step { display: flex; gap: 11px; align-items: flex-start; }
+.step-num {
+  width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+  font-size: 11px; font-weight: 700; margin-top: 0px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--blue); color: white;
+}
+.step p { font-size: 12px; color: var(--slate); line-height: 1.6; }
+.step p b { color: var(--ink); }
+
+/* ═══════════════ SKEW NOTE ═══════════════ */
+.skew-note {
+  background: #F0FDF9; border: 1.5px solid #6EE7D2;
+  border-radius: 10px; padding: 12px 14px; margin-top: 11px;
+}
+.skew-note .sn-title {
+  font-size: 9.5px; font-weight: 700; color: var(--teal);
+  letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 5px;
+}
+.skew-note p { font-size: 11.5px; color: #134E4A; line-height: 1.6; }
+
+/* ═══════════════ LEGEND ═══════════════ */
+.legend { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+.legend-item { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--slate); }
+.legend-line { width: 22px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+.legend-dash { border-top: 2.5px dashed; height: 0; background: transparent !important; }
+
+/* ═══════════════ FOOTER ═══════════════ */
+.footer {
+  background: var(--ink);
+  padding: 13px 52px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.footer p { font-size: 11px; color: rgba(255,255,255,0.42); }
+.footer .fb { color: rgba(255,255,255,0.7); font-weight: 600; }
+.footer-badge {
+  background: var(--mint); color: var(--ink);
+  border-radius: 20px; padding: 3px 14px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+}
+
+</style>
+</head>
+<body>
+<div class="poster">
+
+<!-- ════════════════════════════════════ HEADER ════════════════════════════════════ -->
+<div class="hdr">
+  <div class="hdr-arc"></div>
+  <div class="hdr-arc2"></div>
+  <div class="hdr-eyebrow">Machine Learning · Model Evaluation · Classification</div>
+  <h1>ROC Curves &amp; <em>AUC</em><br>for Model Evaluation</h1>
+  <p class="hdr-desc">
+    Why accuracy alone misleads — and how ROC curves with AUC scores provide a robust,
+    threshold-independent, class-imbalance-resistant framework for evaluating and comparing classifiers.
+  </p>
+  <div class="hdr-pills">
+    <span class="pill">Binary Classification</span>
+    <span class="pill">Threshold Analysis</span>
+    <span class="pill">AUC Score</span>
+    <span class="pill">Class Imbalance</span>
+    <span class="pill">Model Selection</span>
+  </div>
+</div>
+
+<!-- ════════════ SECTION 1: FOUNDATION ════════════ -->
+<div class="band">
+  <div class="band-num" style="background:var(--blue); color:white;">1</div>
+  <div class="band-title" style="color:var(--blue);">Foundation — Confusion Matrix &amp; Standard Metrics</div>
+</div>
+
+<div class="row">
+
+  <!-- Confusion Matrix -->
+  <div class="col">
+    <div class="sec-label" style="color:var(--blue);">
+      <span class="dot" style="background:var(--blue);"></span>Confusion Matrix
+    </div>
+    <h2>Predicted vs. Actual Labels</h2>
+    <p>A 2×2 summary of every prediction the model makes — the source of all classification metrics.</p>
+    <div class="cm">
+      <div class="cm-header-row">
+        <div class="cm-header-cell">Predicted<br><b>Positive</b></div>
+        <div class="cm-header-cell">Predicted<br><b>Negative</b></div>
+      </div>
+      <div class="cm-body-row">
+        <div class="cm-row-hdr">Actual<br><b>Positive</b></div>
+        <div class="cm-cell tp"><b>TP</b><span>True Positive</span></div>
+        <div class="cm-cell fn"><b>FN</b><span>False Negative</span></div>
+      </div>
+      <div class="cm-body-row">
+        <div class="cm-row-hdr">Actual<br><b>Negative</b></div>
+        <div class="cm-cell fp"><b>FP</b><span>False Positive</span></div>
+        <div class="cm-cell tn"><b>TN</b><span>True Negative</span></div>
+      </div>
+      <p class="cm-axis-note">Green = correct predictions &nbsp;·&nbsp; Red = errors</p>
+    </div>
+  </div>
+
+  <!-- Metrics -->
+  <div class="col">
+    <div class="sec-label" style="color:var(--teal);">
+      <span class="dot" style="background:var(--teal);"></span>Standard Metrics
+    </div>
+    <h2>Accuracy · Precision · Recall</h2>
+    <p>Three widely-used formulas for measuring model quality — all derived from the confusion matrix.</p>
+    <div class="metric-row">
+      <div class="metric-card mc-a">
+        <div class="mf">TP + TN<br>────────<br>TP+TN+FP+FN</div>
+        <div class="mn">Accuracy</div>
+      </div>
+      <div class="metric-card mc-p">
+        <div class="mf">&nbsp;&nbsp;TP<br>────────<br>TP + FP</div>
+        <div class="mn">Precision</div>
+      </div>
+      <div class="metric-card mc-r">
+        <div class="mf">&nbsp;&nbsp;TP<br>────────<br>TP + FN</div>
+        <div class="mn">Recall</div>
+      </div>
+    </div>
+    <div class="bullets" style="margin-top:11px;">
+      <div class="bullet">
+        <div class="bi" style="background:#DBEAFE; color:var(--blue);">✓</div>
+        <p><b>Accuracy</b> — fraction of all correct predictions</p>
+      </div>
+      <div class="bullet">
+        <div class="bi" style="background:#D1FAE5; color:var(--teal);">✓</div>
+        <p><b>Precision</b> — when positive is predicted, how often is it right?</p>
+      </div>
+      <div class="bullet">
+        <div class="bi" style="background:#DCFCE7; color:#15803D;">✓</div>
+        <p><b>Recall</b> — how many actual positives were caught?</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- The Problem -->
+  <div class="col">
+    <div class="sec-label" style="color:#B91C1C;">
+      <span class="dot" style="background:#EF4444;"></span>The Problem
+    </div>
+    <h2>Class Imbalance Breaks These Metrics</h2>
+    <p>When one class far outnumbers the other, all three metrics can paint a dangerously false picture.</p>
+    <div class="warn-box">
+      <div class="wt">⚠ Classic Trap</div>
+      <p>A fraud detector on data that is <b>99% non-fraud</b> achieves <b>99% accuracy</b> by simply predicting "not fraud" for every transaction — yet it catches <b>zero fraud cases</b>.</p>
+    </div>
+    <div class="bullets" style="margin-top:11px;">
+      <div class="bullet">
+        <div class="bi" style="background:#FEE2E2; color:#991B1B;">✗</div>
+        <p><b>Accuracy</b> dominated by majority class</p>
+      </div>
+      <div class="bullet">
+        <div class="bi" style="background:#FEE2E2; color:#991B1B;">✗</div>
+        <p><b>Precision/Recall</b> shift with every threshold change</p>
+      </div>
+      <div class="bullet">
+        <div class="bi" style="background:#FEE2E2; color:#991B1B;">✗</div>
+        <p>Hard to <b>compare models</b> fairly at a single threshold</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end row -->
+
+<!-- ════════════ SECTION 2: ROC CURVE ════════════ -->
+<div class="band">
+  <div class="band-num" style="background:var(--teal); color:white;">2</div>
+  <div class="band-title" style="color:var(--teal);">ROC Curve — Threshold-Independent Performance View</div>
+</div>
+
+<div class="row">
+
+  <!-- TPR / FPR + key insights -->
+  <div class="col">
+    <div class="sec-label" style="color:var(--sky);">
+      <span class="dot" style="background:var(--sky);"></span>ROC Axes
+    </div>
+    <h2>TPR vs. FPR Across All Thresholds</h2>
+    <p>As the decision threshold moves from 0 → 1, both TPR and FPR change. The ROC curve traces this trade-off continuously.</p>
+
+    <div class="fml-row">
+      <div class="fml-box fml-tpr">
+        <div class="fname">TPR · Sensitivity</div>
+        <div class="fformula">TP<br>──────<br>TP + FN</div>
+        <div class="faka">= Recall = Hit Rate</div>
+      </div>
+      <div class="fml-box fml-fpr">
+        <div class="fname">FPR · Fall-out</div>
+        <div class="fformula">FP<br>──────<br>FP + TN</div>
+        <div class="faka">= 1 − Specificity</div>
+      </div>
+    </div>
+
+    <div class="key-cards">
+      <div class="key-card kc-blue">
+        <div class="kc-title">🎯 Best operating point</div>
+        <p>The <b>top-left corner</b> (TPR = 1, FPR = 0) is the ideal — perfect sensitivity with no false alarms.</p>
+      </div>
+      <div class="key-card kc-teal">
+        <div class="kc-title">📐 Diagonal = random</div>
+        <p>The diagonal from (0,0) to (1,1) is a <b>random classifier</b>. Any useful model must curve above it.</p>
+      </div>
+      <div class="key-card kc-mint">
+        <div class="kc-title">🔁 All thresholds at once</div>
+        <p>Every point on the curve is one threshold — ROC shows the <b>full performance envelope</b>, not just a single cut-off.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROC Chart -->
+  <div class="col w15">
+    <div class="sec-label" style="color:var(--sky);">
+      <span class="dot" style="background:var(--sky);"></span>ROC Curve — Three Models Compared
+    </div>
+    <h2>Closer to Top-Left = Better Model</h2>
+
+    <div class="roc-svg-wrap">
+      <svg class="roc-svg" viewBox="0 0 370 300" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="fillA" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#0D7A6A" stop-opacity="0.13"/>
+            <stop offset="100%" stop-color="#0D7A6A" stop-opacity="0.02"/>
+          </linearGradient>
+          <linearGradient id="fillB" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#1255A3" stop-opacity="0.11"/>
+            <stop offset="100%" stop-color="#1255A3" stop-opacity="0.01"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Background -->
+        <rect width="370" height="300" fill="#F8FBFF" rx="10"/>
+
+        <!-- Grid -->
+        <g stroke="#E2EBF4" stroke-width="0.8">
+          <line x1="55" y1="18" x2="55" y2="250"/>
+          <line x1="55" y1="250" x2="330" y2="250"/>
+          <!-- horizontals -->
+          <line x1="55" y1="192" x2="330" y2="192" stroke-dasharray="3,3"/>
+          <line x1="55" y1="134" x2="330" y2="134" stroke-dasharray="3,3"/>
+          <line x1="55" y1="76"  x2="330" y2="76"  stroke-dasharray="3,3"/>
+          <!-- verticals -->
+          <line x1="124" y1="18" x2="124" y2="250" stroke-dasharray="3,3"/>
+          <line x1="193" y1="18" x2="193" y2="250" stroke-dasharray="3,3"/>
+          <line x1="262" y1="18" x2="262" y2="250" stroke-dasharray="3,3"/>
+        </g>
+
+        <!-- Axis labels -->
+        <text x="192" y="276" text-anchor="middle" font-size="11" fill="#546E7A" font-family="DM Sans" font-weight="600">False Positive Rate (FPR)</text>
+        <text x="16" y="134" text-anchor="middle" font-size="11" fill="#546E7A" font-family="DM Sans" font-weight="600" transform="rotate(-90 16 134)">True Positive Rate (TPR)</text>
+
+        <!-- Tick labels -->
+        <g font-size="9" fill="#90A4AE" font-family="DM Mono" text-anchor="middle">
+          <text x="55"  y="263">0.0</text>
+          <text x="124" y="263">0.25</text>
+          <text x="193" y="263">0.5</text>
+          <text x="262" y="263">0.75</text>
+          <text x="330" y="263">1.0</text>
+        </g>
+        <g font-size="9" fill="#90A4AE" font-family="DM Mono" text-anchor="end">
+          <text x="48" y="253">0.0</text>
+          <text x="48" y="196">0.25</text>
+          <text x="48" y="138">0.5</text>
+          <text x="48" y="80">0.75</text>
+          <text x="48" y="24">1.0</text>
+        </g>
+
+        <!-- Diagonal -->
+        <line x1="55" y1="250" x2="330" y2="18" stroke="#B0BEC5" stroke-width="1.5" stroke-dasharray="5,4"/>
+        <text x="230" y="153" font-size="8.5" fill="#90A4AE" font-family="DM Sans" transform="rotate(-40 230 153)">Random (AUC = 0.5)</text>
+
+        <!-- Model A fill + curve (AUC ~0.95) -->
+        <path d="M55,250 Q75,62 100,42 Q145,26 200,22 Q260,18 330,18 L330,250 Z" fill="url(#fillA)"/>
+        <path d="M55,250 Q75,62 100,42 Q145,26 200,22 Q260,18 330,18" fill="none" stroke="#0D7A6A" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+
+        <!-- Model B fill + curve (AUC ~0.78) -->
+        <path d="M55,250 Q110,148 145,105 Q190,66 235,46 Q280,30 330,18 L330,250 Z" fill="url(#fillB)"/>
+        <path d="M55,250 Q110,148 145,105 Q190,66 235,46 Q280,30 330,18" fill="none" stroke="#1255A3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+        <!-- Model C curve (AUC ~0.62) -->
+        <path d="M55,250 Q130,200 172,165 Q220,128 265,95 Q295,70 330,18" fill="none" stroke="#EF4444" stroke-width="2" stroke-dasharray="5,3" stroke-linecap="round" stroke-linejoin="round"/>
+
+        <!-- Ideal corner star -->
+        <circle cx="55" cy="18" r="7" fill="var(--gold)" opacity="0.9"/>
+        <text x="66" y="15" font-size="9" fill="#92400E" font-family="DM Sans" font-weight="700">← Ideal (TPR=1, FPR=0)</text>
+
+        <!-- Labels -->
+        <text x="82" y="80"  font-size="10" fill="#0D7A6A" font-family="DM Sans" font-weight="700">Model A</text>
+        <text x="82" y="92"  font-size="9"  fill="#0D7A6A" font-family="DM Mono">AUC = 0.95</text>
+
+        <text x="155" y="140" font-size="10" fill="#1255A3" font-family="DM Sans" font-weight="700">Model B</text>
+        <text x="155" y="152" font-size="9"  fill="#1255A3" font-family="DM Mono">AUC = 0.78</text>
+
+        <text x="215" y="198" font-size="10" fill="#DC2626" font-family="DM Sans" font-weight="700">Model C</text>
+        <text x="215" y="210" font-size="9"  fill="#DC2626" font-family="DM Mono">AUC = 0.62</text>
+      </svg>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-line" style="background:#0D7A6A;"></div>
+        <span><b>Model A (0.95)</b> — Excellent classifier, hugs top-left</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line" style="background:#1255A3;"></div>
+        <span><b>Model B (0.78)</b> — Good, acceptable for many tasks</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line legend-dash" style="border-color:#EF4444;"></div>
+        <span><b>Model C (0.62)</b> — Weak, barely above random</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line" style="background:#B0BEC5;"></div>
+        <span style="color:#90A4AE;"><b>Diagonal</b> — Random baseline (AUC = 0.5)</span>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end row -->
+
+<!-- ════════════ SECTION 3: AUC ════════════ -->
+<div class="band">
+  <div class="band-num" style="background:var(--mint); color:var(--ink);">3</div>
+  <div class="band-title" style="color:var(--teal);">AUC — Area Under the ROC Curve</div>
+</div>
+
+<div class="row">
+
+  <!-- AUC definition + cards -->
+  <div class="col">
+    <div class="sec-label" style="color:var(--teal);">
+      <span class="dot" style="background:var(--mint);"></span>What is AUC?
+    </div>
+    <h2>A Single Number for Overall Quality</h2>
+    <p>AUC measures the area under the ROC curve — it summarises all possible thresholds into one score that reflects how well the model <em>ranks</em> positives above negatives.</p>
+
+    <div class="auc-cards">
+      <div class="auc-card ac-perfect">
+        <div class="auc-val">1.0</div>
+        <div class="auc-text"><b>Perfect Classifier</b>All positives ranked above all negatives — ideal but rarely achieved in practice.</div>
+      </div>
+      <div class="auc-card ac-good">
+        <div class="auc-val">0.8+</div>
+        <div class="auc-text"><b>Good to Excellent</b>Strong discriminative ability; useful for most real-world applications.</div>
+      </div>
+      <div class="auc-card ac-random">
+        <div class="auc-val">0.5</div>
+        <div class="auc-text"><b>Random Guessing</b>Model has no discriminative power — equivalent to flipping a coin.</div>
+      </div>
+      <div class="auc-card ac-bad">
+        <div class="auc-val">&lt;0.5</div>
+        <div class="auc-text"><b>Worse than Random</b>Model is systematically wrong — flip predictions to improve it!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUC scale + model comparison -->
+  <div class="col">
+    <div class="sec-label" style="color:var(--teal);">
+      <span class="dot" style="background:var(--teal);"></span>AUC Scale &amp; Model Comparison
+    </div>
+    <h2>Higher AUC = Better Ranking Power</h2>
+    <p>AUC allows direct, threshold-free comparison between any number of models trained on the same data.</p>
+
+    <div class="auc-scale">
+      <div class="auc-scale-title">AUC Performance Spectrum</div>
+      <div class="auc-bar-track">
+        <div class="auc-bar-marker" style="left: 0%;"></div>
+        <div class="auc-bar-marker" style="left: 50%;"></div>
+        <div class="auc-bar-marker" style="left: 100%; transform:translateX(-3px);"></div>
+      </div>
+      <div class="auc-bar-labels">
+        <span>0.0<br>Inverse</span>
+        <span style="text-align:center;">0.5<br>Random</span>
+        <span style="text-align:center;">0.7<br>Fair</span>
+        <span style="text-align:center;">0.8<br>Good</span>
+        <span style="text-align:right;">1.0<br>Perfect</span>
+      </div>
+      <div class="auc-model-pills">
+        <span class="amp" style="background:#DCFCE7; color:#166534;">Model A: 0.95 ✓</span>
+        <span class="amp" style="background:#DBEAFE; color:#1D4ED8;">Model B: 0.78</span>
+        <span class="amp" style="background:#FEE2E2; color:#991B1B;">Model C: 0.62 ✗</span>
+      </div>
+    </div>
+
+    <div class="hl-box">
+      <div class="hl-tag">🔑 Why AUC beats Accuracy</div>
+      <p>AUC is <b>threshold-independent</b> — it evaluates the model across all possible cut-offs simultaneously. Two models with the same accuracy can have very different AUC scores, revealing which one truly generalises better.</p>
+    </div>
+  </div>
+
+  <!-- Skew immunity + Model Selection -->
+  <div class="col">
+    <div class="sec-label" style="color:var(--mint);">
+      <span class="dot" style="background:var(--mint);"></span>Robustness &amp; Selection
+    </div>
+    <h2>Insensitive to Class Skew</h2>
+    <p>Because TPR and FPR are each computed <em>within</em> their own class, adding 10× more negatives does not shift the ROC curve or AUC — making it reliable even on heavily imbalanced data.</p>
+
+    <div class="skew-note">
+      <div class="sn-title">✅ Immune to Class Imbalance</div>
+      <p>Whether your data is 50/50 or 1/99, the <b>ROC curve and AUC remain the same</b>. Accuracy would swing wildly; AUC stays stable — critical for fraud detection, medical diagnosis, and anomaly detection.</p>
+    </div>
+
+    <div style="margin-top:14px;">
+      <div class="sec-label" style="color:var(--blue);">
+        <span class="dot" style="background:var(--blue);"></span>Model Selection with ROC + AUC
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <p><b>Compare AUC scores</b> across candidate models — pick the one with the highest AUC as your starting point.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <p><b>Inspect the ROC curve</b> shape — a high AUC but poor curve at low FPR may still fail for high-precision tasks.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <p><b>Choose your threshold</b> based on business cost: minimise FP (precision-critical) or maximise TP (recall-critical).</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end row -->
+
+<!-- ════════════ FOOTER ════════════ -->
+<div class="footer">
+  <p class="fb">ROC Curves &amp; AUC · Model Evaluation · Binary Classification</p>
+  <div class="footer-badge">AUC → 1 = Better Model</div>
+  <p>Higher AUC · Threshold-Free · Imbalance-Robust</p>
+</div>
+
+</div><!-- end poster -->
+</body>
+</html>
